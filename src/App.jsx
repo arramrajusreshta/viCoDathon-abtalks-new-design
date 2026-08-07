@@ -1,10 +1,10 @@
 import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
-import Navbar from './components/Navbar';
+import Navbar from './components/navbar';
 import Hero from './components/hero';
 import Features from './components/features';
-import Dashboard from './components/Dashboard';
-import Footer from './components/Footer';
+import Dashboard from './components/dashboard';
+import Footer from './components/footer';
 
 export default function App() {
   return (
