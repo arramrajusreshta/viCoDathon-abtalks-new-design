@@ -1,0 +1,5 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "cd abtalks-redesign && npm run build",
+  "outputDirectory": "abtalks-redesign/.next"
+}
