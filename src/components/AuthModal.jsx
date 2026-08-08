@@ -6,8 +6,10 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   if (!isOpen) return null;
 
@@ -15,10 +17,11 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     e.preventDefault();
     setLoading(true);
     setErrorMsg('');
+    setSuccessMsg('');
 
     try {
       if (isSignUp) {
-        // 1. Sign up user
+        // 1. Sign up user with Supabase
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -29,9 +32,9 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
 
         if (error) throw error;
 
-        // 2. Create profile entry if user registered
+        // 2. Insert into profiles table
         if (data?.user) {
-          await supabase.from('profiles').insert([
+          await supabase.from('profiles').upsert([
             {
               id: data.user.id,
               full_name: fullName,
@@ -39,17 +42,22 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             },
           ]);
         }
+
+        // 3. Inform user and switch to Sign In mode
+        setSuccessMsg('Account created successfully! Please sign in with your credentials.');
+        setIsSignUp(false);
+        setPassword(''); // Clear password field for login input
       } else {
-        // Sign in user
+        // Sign in existing user
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
         if (error) throw error;
-      }
 
-      onAuthSuccess();
+        onAuthSuccess();
+      }
     } catch (err) {
       setErrorMsg(err.message || 'Authentication failed. Please try again.');
     } finally {
@@ -63,6 +71,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
         {/* Close Button */}
         <button
           onClick={onClose}
+          type="button"
           className="absolute top-4 right-4 text-slate-400 hover:text-white text-sm font-bold w-8 h-8 rounded-full bg-slate-800/50 flex items-center justify-center"
         >
           ✕
@@ -81,6 +90,12 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
           </div>
         )}
 
+        {successMsg && (
+          <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-xl">
+            {successMsg}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {isSignUp && (
             <div>
@@ -88,6 +103,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
               <input
                 type="text"
                 required
+                name="name"
+                autoComplete="name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="John Doe"
@@ -101,6 +118,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             <input
               type="email"
               required
+              name="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
@@ -113,12 +132,28 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             <input
               type="password"
               required
+              name="password"
+              autoComplete={isSignUp ? 'new-password' : 'current-password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
             />
           </div>
+
+          {!isSignUp && (
+            <div className="flex items-center justify-between text-xs text-slate-400">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="rounded bg-slate-950 border-slate-800 text-amber-500 focus:ring-amber-500"
+                />
+                Remember Me
+              </label>
+            </div>
+          )}
 
           <button
             type="submit"
@@ -136,6 +171,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             onClick={() => {
               setIsSignUp(!isSignUp);
               setErrorMsg('');
+              setSuccessMsg('');
             }}
             className="text-amber-400 font-bold hover:underline ml-1"
           >
