@@ -1,9 +1,10 @@
+import { supabase } from "./lib/supabase";
 import Leaderboard from "./pages/leaderboard";
 import Auth from "./pages/auth";
 import Curriculum from "./pages/curriculum";
 import ActivityHeatmap from "./components/ActivityHeatmap";
 import Profile from './pages/profile';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from "react";
 import { Routes, Route, useNavigate, useParams, Link } from 'react-router-dom';
 
 // --- MOCK DATA ---
@@ -35,17 +36,68 @@ const mockStudentData = {
 // --- SHARED MOBILE HEADER ---
 function MobileHeader() {
   const navigate = useNavigate();
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    navigate("/auth");
+  }
+
   return (
-    <header className="sticky top-0 z-50 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 flex items-center justify-between max-w-[390px] mx-auto">
-      <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/dashboard')}>
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 via-orange-500 to-red-500 flex items-center justify-center font-black text-white text-sm shadow-md shadow-orange-500/20">
-          AB
+    <header className="sticky top-0 z-50 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 max-w-[390px] mx-auto">
+      <div className="flex items-center justify-between">
+        <div
+          className="flex items-center gap-2 cursor-pointer"
+          onClick={() => navigate("/dashboard")}
+        >
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 via-orange-500 to-red-500 flex items-center justify-center font-black text-white text-sm">
+            AB
+          </div>
+
+          <span className="text-base font-bold text-white">
+            ABTalks
+            <span className="text-xs font-normal text-orange-400 ml-1">
+              60D
+            </span>
+          </span>
         </div>
-        <span className="text-base font-bold text-white tracking-tight">ABTalks <span className="text-xs font-normal text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded-full border border-orange-500/20">60D</span></span>
+
+        <button
+          onClick={handleLogout}
+          className="text-[10px] bg-rose-500/10 text-rose-400 px-3 py-1.5 rounded-full border border-rose-500/20"
+        >
+          Logout
+        </button>
       </div>
-      <Link to="/dashboard" className="text-xs bg-slate-800 text-slate-200 hover:text-white px-3 py-1.5 rounded-full border border-slate-700 font-medium">
-        Dashboard
-      </Link>
+
+      <div className="flex gap-2 mt-3 overflow-x-auto">
+        <button
+          onClick={() => navigate("/dashboard")}
+          className="text-[10px] px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300"
+        >
+          Dashboard
+        </button>
+
+        <button
+          onClick={() => navigate("/profile")}
+          className="text-[10px] px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300"
+        >
+          Profile
+        </button>
+
+        <button
+          onClick={() => navigate("/curriculum")}
+          className="text-[10px] px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300"
+        >
+          Curriculum
+        </button>
+
+        <button
+          onClick={() => navigate("/leaderboard")}
+          className="text-[10px] px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300"
+        >
+          Leaderboard
+        </button>
+      </div>
     </header>
   );
 }
@@ -122,7 +174,54 @@ function LandingPage() {
 // --- SCREEN 2: STUDENT DASHBOARD ( /dashboard ) ---
 function StudentDashboard() {
   const navigate = useNavigate();
-  const data = mockStudentData;
+
+const [profile, setProfile] = useState(null);
+const [rank, setRank] = useState(null);
+const [loading, setLoading] = useState(true);
+
+const data = mockStudentData;
+
+useEffect(() => {
+  loadDashboardData();
+}, []);
+
+async function loadDashboardData() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    setLoading(false);
+    return;
+  }
+
+  const { data: profileData, error: profileError } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError) {
+    console.error("Dashboard profile error:", profileError);
+  } else {
+    setProfile(profileData);
+  }
+
+  const { data: leaderboardData, error: leaderboardError } =
+    await supabase.rpc("get_leaderboard", {
+      page_number: 1,
+      page_size: 1000,
+    });
+
+  if (leaderboardError) {
+    console.error("Dashboard rank error:", leaderboardError);
+  } else {
+    const me = leaderboardData?.find((student) => student.id === user.id);
+    setRank(me?.rank ?? null);
+  }
+
+  setLoading(false);
+}
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 max-w-[390px] mx-auto pb-12">
@@ -132,12 +231,18 @@ function StudentDashboard() {
         {/* Student Welcome & Profile */}
         <div className="flex items-center justify-between bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800">
           <div>
-            <h2 className="text-base font-bold text-white">{data.name}</h2>
-            <p className="text-[11px] text-slate-400">{data.college} • {data.track}</p>
+            <h2 className="text-base font-bold text-white">
+  {profile?.name || "Your Name"}
+</h2>
+
+<p className="text-[11px] text-slate-400">
+  {profile?.college || "College not added"} •{" "}
+  {profile?.track || "Track not added"}
+</p>
           </div>
           <div className="text-right">
             <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-              Rank #{data.rank}
+              {rank ? `Rank #${rank}` : "Unranked"}
             </span>
           </div>
         </div>
@@ -147,7 +252,7 @@ function StudentDashboard() {
           <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 p-4 rounded-2xl border border-amber-500/20 relative overflow-hidden">
             <p className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider">Current Streak</p>
             <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-3xl font-black text-amber-400">🔥 {data.streak}</span>
+              <span className="text-3xl font-black text-amber-400">🔥 {profile?.current_streak ?? 0}</span>
               <span className="text-xs text-amber-300/80">Days</span>
             </div>
             <p className="text-[10px] text-amber-200/60 mt-1">Keep it alive tonight!</p>
@@ -156,9 +261,9 @@ function StudentDashboard() {
           <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800">
             <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Progress</p>
             <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-3xl font-black text-white">{Math.round((data.completedDays / data.totalDays) * 100)}%</span>
+              <span className="text-3xl font-black text-white">{Math.round(((profile?.completed_days ?? 0) / 60) * 100)}%</span>
             </div>
-            <p className="text-[10px] text-slate-400 mt-1">{data.completedDays} of {data.totalDays} Days Done</p>
+            <p className="text-[10px] text-slate-400 mt-1">{profile?.completed_days ?? 0} of 60 Days Done</p>
           </div>
         </div>
 
@@ -305,18 +410,109 @@ function ChallengeDay() {
     </div>
   );
 }
+function ProtectedRoute({ children }) {
+  const [checking, setChecking] = useState(true);
+  const [session, setSession] = useState(null);
+  const navigate = useNavigate();
 
+  useEffect(() => {
+    async function checkSession() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      setSession(session);
+      setChecking(false);
+
+      if (!session) {
+        navigate("/auth");
+      }
+    }
+
+    checkSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+
+      if (!session) {
+        navigate("/auth");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+        <p className="text-xs text-slate-400">Checking session...</p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return null;
+  }
+
+  return children;
+}
 // --- APP ROUTER ---
 export default function App() {
   return (
     <Routes>
-      <Route path="/leaderboard" element={<Leaderboard />} />
-      <Route path="/auth" element={<Auth />} />
-      <Route path="/curriculum" element={<Curriculum />} />
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/dashboard" element={<StudentDashboard />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/day/:dayId" element={<ChallengeDay />} />
-    </Routes>
+  {/* Public routes */}
+  <Route path="/" element={<LandingPage />} />
+  <Route path="/auth" element={<Auth />} />
+
+  {/* Protected routes */}
+  <Route
+    path="/dashboard"
+    element={
+      <ProtectedRoute>
+        <StudentDashboard />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/profile"
+    element={
+      <ProtectedRoute>
+        <Profile />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/curriculum"
+    element={
+      <ProtectedRoute>
+        <Curriculum />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/leaderboard"
+    element={
+      <ProtectedRoute>
+        <Leaderboard />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/day/:dayId"
+    element={
+      <ProtectedRoute>
+        <ChallengeDay />
+      </ProtectedRoute>
+    }
+  />
+</Routes>
   );
 }
