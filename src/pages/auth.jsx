@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { supabase } from "../lib/supabase";
+import { useNavigate } from "react-router-dom";
 
 export default function Auth() {
+    const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,7 +25,7 @@ export default function Auth() {
       if (error) {
         setMessage(error.message);
       } else {
-        setMessage("Logged in successfully!");
+        navigate("/dashboard");
       }
     } else {
       const { error } = await supabase.auth.signUp({
@@ -51,7 +53,7 @@ export default function Auth() {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: window.location.origin + "/profile",
+      redirectTo: window.location.origin + "/dashboard",
     },
   });
 
