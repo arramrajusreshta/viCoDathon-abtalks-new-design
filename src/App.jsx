@@ -1,3 +1,4 @@
+import Auth from "./pages/auth";
 import Curriculum from "./pages/curriculum";
 import ActivityHeatmap from "./components/ActivityHeatmap";
 import Profile from './pages/profile';
@@ -308,6 +309,7 @@ function ChallengeDay() {
 export default function App() {
   return (
     <Routes>
+      <Route path="/auth" element={<Auth />} />
       <Route path="/curriculum" element={<Curriculum />} />
       <Route path="/" element={<LandingPage />} />
       <Route path="/dashboard" element={<StudentDashboard />} />
