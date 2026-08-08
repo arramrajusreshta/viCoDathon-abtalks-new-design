@@ -1,6 +1,31 @@
 import React, { useState } from 'react';
 import { Routes, Route, useNavigate, useParams, Link } from 'react-router-dom';
-import { mockStudentData } from './mockData';
+
+// --- MOCK DATA ---
+const mockStudentData = {
+  name: "Aarav Sharma",
+  college: "IIT Bombay",
+  track: "Full-Stack Web Dev",
+  streak: 11,
+  totalDays: 60,
+  completedDays: 11,
+  rank: 42,
+  totalStudents: 1280,
+  missedDays: [5],
+  todayTask: {
+    dayNumber: 12,
+    title: "Build a Custom Hook for API Caching",
+    category: "React / State Management",
+    description: "Create a reusable `useFetch` hook in React that caches API responses in `localStorage` to avoid duplicate network calls.",
+    requirements: [
+      "Accept URL and cache expiration time as parameters",
+      "Store fetched data in localStorage",
+      "Return { data, loading, error, refetch }"
+    ],
+    githubSubmitted: false,
+    linkedinSubmitted: false
+  }
+};
 
 // --- SHARED MOBILE HEADER ---
 function MobileHeader() {
@@ -152,7 +177,7 @@ function StudentDashboard() {
           </button>
         </div>
 
-        {/* 60-Day Progress Grid (Handles Streak & Missed Day Edge Cases) */}
+        {/* 60-Day Progress Grid */}
         <div className="bg-slate-900/40 border border-slate-800/80 p-4 rounded-2xl">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-xs font-bold text-slate-300">60-Day Route Map</h4>
