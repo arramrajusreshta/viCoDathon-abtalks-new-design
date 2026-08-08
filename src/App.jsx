@@ -1,3 +1,4 @@
+import Leaderboard from "./pages/leaderboard";
 import Auth from "./pages/auth";
 import Curriculum from "./pages/curriculum";
 import ActivityHeatmap from "./components/ActivityHeatmap";
@@ -309,6 +310,7 @@ function ChallengeDay() {
 export default function App() {
   return (
     <Routes>
+      <Route path="/leaderboard" element={<Leaderboard />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/curriculum" element={<Curriculum />} />
       <Route path="/" element={<LandingPage />} />
