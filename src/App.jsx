@@ -303,13 +303,54 @@ function ChallengeDay() {
   const [githubUrl, setGithubUrl] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [submitted, setSubmitted] = useState(false);
+const [submitting, setSubmitting] = useState(false);
+const [submitError, setSubmitError] = useState("");
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (githubUrl && linkedinUrl) {
-      setSubmitted(true);
-    }
-  };
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  setSubmitting(true);
+  setSubmitError("");
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    setSubmitError("You must be logged in to submit proof.");
+    setSubmitting(false);
+    return;
+  }
+
+  const dayNumber = Number(dayId || task.dayNumber);
+
+  const { error } = await supabase
+    .from("submissions")
+    .upsert(
+      {
+        user_id: user.id,
+        day_number: dayNumber,
+        github_url: githubUrl,
+        linkedin_url: linkedinUrl,
+        github_verified: false,
+        linkedin_verified: false,
+        submitted_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "user_id,day_number",
+      }
+    );
+
+  if (error) {
+    console.error("Submission error:", error);
+    setSubmitError(error.message);
+    setSubmitting(false);
+    return;
+  }
+
+  setSubmitted(true);
+  setSubmitting(false);
+};
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 max-w-[390px] mx-auto pb-12">
@@ -359,7 +400,9 @@ function ChallengeDay() {
             <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-2">
               <span className="text-2xl">🎉</span>
               <h4 className="text-xs font-bold text-emerald-400">Day {dayId} Proof Submitted!</h4>
-              <p className="text-[10px] text-slate-300">Your streak has been extended to 12 Days.</p>
+              <p className="text-[10px] text-slate-300">
+  Your proof was submitted and is awaiting verification.
+</p>
               <button 
                 onClick={() => navigate('/dashboard')}
                 className="mt-2 w-full py-2 bg-slate-800 text-xs font-semibold rounded-lg text-white"
@@ -396,13 +439,20 @@ function ChallengeDay() {
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500"
                 />
               </div>
-
+{submitError && (
+  <p className="text-[10px] text-rose-400">
+    {submitError}
+  </p>
+)}
               <button
-                type="submit"
-                className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold text-xs rounded-xl shadow-lg active:scale-[0.98] transition-transform"
-              >
-                Submit Day {dayId || task.dayNumber} Proof →
-              </button>
+  type="submit"
+  disabled={submitting}
+  className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold text-xs rounded-xl shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50"
+>
+  {submitting
+    ? "Submitting..."
+    : `Submit Day ${dayId || task.dayNumber} Proof →`}
+</button>
             </form>
           )}
         </div>
