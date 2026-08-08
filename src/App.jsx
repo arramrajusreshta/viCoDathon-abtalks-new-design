@@ -1,3 +1,6 @@
+import Curriculum from "./pages/curriculum";
+import ActivityHeatmap from "./components/ActivityHeatmap";
+import Profile from './pages/profile';
 import React, { useState } from 'react';
 import { Routes, Route, useNavigate, useParams, Link } from 'react-router-dom';
 
@@ -178,40 +181,7 @@ function StudentDashboard() {
         </div>
 
         {/* 60-Day Progress Grid */}
-        <div className="bg-slate-900/40 border border-slate-800/80 p-4 rounded-2xl">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-xs font-bold text-slate-300">60-Day Route Map</h4>
-            <span className="text-[10px] text-slate-400">Green = Complete</span>
-          </div>
-
-          <div className="grid grid-cols-6 gap-2">
-            {Array.from({ length: 18 }, (_, i) => {
-              const dayNum = i + 1;
-              const isCompleted = dayNum <= data.completedDays && !data.missedDays.includes(dayNum);
-              const isMissed = data.missedDays.includes(dayNum);
-              const isToday = dayNum === data.todayTask.dayNumber;
-
-              return (
-                <button
-                  key={dayNum}
-                  onClick={() => navigate(`/day/${dayNum}`)}
-                  className={`h-9 rounded-lg flex flex-col items-center justify-center text-[10px] font-bold border transition-all ${
-                    isToday
-                      ? 'bg-orange-500/20 border-orange-500 text-orange-400 ring-2 ring-orange-500/30'
-                      : isCompleted
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                      : isMissed
-                      ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
-                      : 'bg-slate-950 border-slate-800 text-slate-600'
-                  }`}
-                >
-                  <span>D{dayNum}</span>
-                  {isMissed && <span className="text-[8px] -mt-1">✖</span>}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <ActivityHeatmap />
       </div>
     </div>
   );
@@ -338,8 +308,10 @@ function ChallengeDay() {
 export default function App() {
   return (
     <Routes>
+      <Route path="/curriculum" element={<Curriculum />} />
       <Route path="/" element={<LandingPage />} />
       <Route path="/dashboard" element={<StudentDashboard />} />
+      <Route path="/profile" element={<Profile />} />
       <Route path="/day/:dayId" element={<ChallengeDay />} />
     </Routes>
   );
