@@ -1,10 +1,49 @@
-import BadgeCard from "../components/BadgeCard";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabase";
+import BadgeCard from "../components/BadgeCard";
 
 export default function Profile() {
   const navigate = useNavigate();
   const [showEditModal, setShowEditModal] = useState(false);
+
+  const [profile, setProfile] = useState(null);
+const [loading, setLoading] = useState(true);
+const [editName, setEditName] = useState("");
+const [editCollege, setEditCollege] = useState("");
+const [editTrack, setEditTrack] = useState("");
+const [editGithub, setEditGithub] = useState("");
+const [editLinkedin, setEditLinkedin] = useState("");
+const [saving, setSaving] = useState(false);
+
+useEffect(() => {
+  loadProfile();
+}, []);
+
+async function loadProfile() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    setLoading(false);
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
+  if (error) {
+    console.error("Profile error:", error);
+  } else {
+    setProfile(data);
+  }
+
+  setLoading(false);
+}
 
   const badges = [
     {
@@ -27,8 +66,57 @@ export default function Profile() {
     },
   ];
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 max-w-[390px] mx-auto pb-12">
+  function openEditModal() {
+  setEditName(profile?.name || "");
+  setEditCollege(profile?.college || "");
+  setEditTrack(profile?.track || "");
+  setEditGithub(profile?.github_username || "");
+  setEditLinkedin(profile?.linkedin_url || "");
+  setShowEditModal(true);
+}
+
+async function saveProfile() {
+  setSaving(true);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    setSaving(false);
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({
+      name: editName,
+      college: editCollege,
+      track: editTrack,
+      github_username: editGithub,
+      linkedin_url: editLinkedin,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", user.id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Save profile error:", error);
+  } else {
+    setProfile(data);
+    setShowEditModal(false);
+  }
+
+  setSaving(false);
+}
+      return (
+  <div className="min-h-screen bg-slate-950 text-slate-100 max-w-[390px] mx-auto pb-12">
+
+    
+
+    {/* Header */}
+    <header className="sticky top-0 z-50 bg-slate-950/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between"></header>
       
       {/* Header */}
       <header className="sticky top-0 z-50 bg-slate-950/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
@@ -55,15 +143,16 @@ export default function Profile() {
           </div>
 
           <h2 className="text-xl font-bold text-white mt-3">
-            Aarav Sharma
+            {profile?.name || "Your Name"}
           </h2>
 
           <p className="text-xs text-slate-400 mt-1">
-            IIT Bombay • Full-Stack Web Dev
+            {profile?.college || "College not added"} •{" "}
+  {profile?.track || "Track not added"}
           </p>
 
           <button
-            onClick={() => setShowEditModal(true)}
+            onClick={openEditModal}
             className="mt-4 px-4 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-semibold text-white hover:bg-slate-700"
           >
             Edit Profile
@@ -73,7 +162,7 @@ export default function Profile() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-center">
-            <p className="text-lg font-black text-amber-400">11</p>
+            <p className="text-lg font-black text-amber-400">{profile?.current_streak ?? 0}</p>
             <p className="text-[10px] text-slate-400">Day Streak</p>
           </div>
 
@@ -101,7 +190,9 @@ export default function Profile() {
             >
               <p className="text-xs font-semibold text-white">GitHub</p>
               <p className="text-[10px] text-slate-400">
-                github.com/aaravsharma
+                {profile?.github_username
+  ? `github.com/${profile.github_username}`
+  : "GitHub username not added"}
               </p>
             </a>
 
@@ -111,7 +202,7 @@ export default function Profile() {
             >
               <p className="text-xs font-semibold text-white">LinkedIn</p>
               <p className="text-[10px] text-slate-400">
-                linkedin.com/in/aaravsharma
+                {profile?.linkedin_url || "LinkedIn not added"}
               </p>
             </a>
 
@@ -184,60 +275,77 @@ export default function Profile() {
       </div>
 
       {/* Edit Profile Modal */}
-      {showEditModal && (
-        <div className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center px-5">
-          <div className="w-full max-w-[360px] bg-slate-900 border border-slate-700 rounded-2xl p-5">
-            
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold text-white">
-                Edit Profile
-              </h2>
+      {/* Edit Profile Modal */}
+{showEditModal && (
+  <div className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center px-5">
+    <div className="w-full max-w-[360px] bg-slate-900 border border-slate-700 rounded-2xl p-5">
 
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="text-slate-400 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-bold text-white">
+          Edit Profile
+        </h2>
 
-            <div className="space-y-3">
-              <input
-                type="text"
-                placeholder="Name"
-                defaultValue="Aarav Sharma"
-                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-orange-500"
-              />
+        <button
+          onClick={() => setShowEditModal(false)}
+          className="text-slate-400 hover:text-white"
+        >
+          ✕
+        </button>
+      </div>
 
-              <input
-                type="text"
-                placeholder="College"
-                defaultValue="IIT Bombay"
-                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-orange-500"
-              />
+      <div className="space-y-3">
+        <input
+          type="text"
+          placeholder="Name"
+          value={editName}
+          onChange={(e) => setEditName(e.target.value)}
+          className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-orange-500"
+        />
 
-              <input
-                type="text"
-                placeholder="GitHub URL"
-                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-orange-500"
-              />
+        <input
+          type="text"
+          placeholder="College"
+          value={editCollege}
+          onChange={(e) => setEditCollege(e.target.value)}
+          className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-orange-500"
+        />
 
-              <input
-                type="text"
-                placeholder="LinkedIn URL"
-                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-orange-500"
-              />
+        <input
+          type="text"
+          placeholder="Track"
+          value={editTrack}
+          onChange={(e) => setEditTrack(e.target.value)}
+          className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-orange-500"
+        />
 
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold text-xs rounded-xl"
-              >
-                Save Changes
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        <input
+          type="text"
+          placeholder="GitHub Username"
+          value={editGithub}
+          onChange={(e) => setEditGithub(e.target.value)}
+          className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-orange-500"
+        />
+
+        <input
+          type="text"
+          placeholder="LinkedIn URL"
+          value={editLinkedin}
+          onChange={(e) => setEditLinkedin(e.target.value)}
+          className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-orange-500"
+        />
+
+        <button
+          onClick={saveProfile}
+          disabled={saving}
+          className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold text-xs rounded-xl disabled:opacity-50"
+        >
+          {saving ? "Saving..." : "Save Changes"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
-}
+} 
+  
