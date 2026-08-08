@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import AuthModal from './components/AuthModal';
-import DailySubmission from './components/DailySubmission';
-import Leaderboard from './components/Leaderboard';
+import DailySubmission from './components/dailysubmission';
+import Leaderboard from './components/leaderboard';
 
 export default function App() {
   const [session, setSession] = useState(null);
