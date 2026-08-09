@@ -10,6 +10,14 @@ export default function Dashboard() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // --- MOCK SQUAD DATA ---
+  const squadMembers = [
+    { name: "Priya Sharma", track: "Full-Stack Web Dev", status: "submitted", time: "10 mins ago" },
+    { name: "Rahul Verma", track: "Full-Stack Web Dev", status: "mid-task", time: "Active now" },
+    { name: "Ananya Iyer", track: "Full-Stack Web Dev", status: "missed", time: "Offline" },
+    { name: "Karan Patel", track: "Full-Stack Web Dev", status: "submitted", time: "1 hour ago" }
+  ];
+
   // --- AUTOMATIC STREAK FREEZE CHECKER ---
   useEffect(() => {
     const challengeStart = new Date("2026-08-09T00:00:00+05:30");
@@ -17,12 +25,10 @@ export default function Dashboard() {
     const diffMs = today - challengeStart;
     const currentDay = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
     
-    // Check if we are past Day 1 and yesterday was skipped
     const yesterday = currentDay - 1;
     if (yesterday > 0) {
       const completedDays = JSON.parse(localStorage.getItem('abtalks_completed_days') || "[]");
       
-      // If yesterday was NOT completed and NOT already frozen, try to auto-freeze it
       if (!completedDays.includes(yesterday) && !frozenDays.includes(yesterday)) {
         if (freezeTokens > 0) {
           const updatedTokens = freezeTokens - 1;
@@ -39,7 +45,6 @@ export default function Dashboard() {
       }
     }
   }, []);
-  // ----------------------------------------
 
   function handleUseFreeze(missedDayNumber) {
     if (freezeTokens <= 0) {
@@ -77,7 +82,7 @@ export default function Dashboard() {
           </div>
           <p className="text-[10px] text-slate-400 mt-0.5">
             You have <span className="text-blue-400 font-semibold">{freezeTokens} tokens</span> left. 
-            {frozenDays.length > 0 && ` (${frozenDays.length} frozen: Days ${frozenDays.join(", ")})`}
+            {frozenDays.length > 0 && ` (${frozenDays.length} frozen)`}
           </p>
         </div>
         <button
@@ -90,6 +95,40 @@ export default function Dashboard() {
           Use Freeze 🧊
         </button>
       </div>
+
+      {/* --- SQUAD / COHORT VIEW PANEL --- */}
+      <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+            <span>👥</span> Your Track Squad Tonight
+          </h3>
+          <span className="text-[9px] text-slate-400">Visible Company</span>
+        </div>
+        
+        <div className="space-y-2">
+          {squadMembers.map((member, index) => {
+            let statusBadge = null;
+            if (member.status === "submitted") {
+              statusBadge = <span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium">Submitted ✅</span>;
+            } else if (member.status === "mid-task") {
+              statusBadge = <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-medium">Mid-task 💻</span>;
+            } else {
+              statusBadge = <span className="text-[9px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-medium">Missed 🌙</span>;
+            }
+
+            return (
+              <div key={index} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/60">
+                <div>
+                  <p className="text-xs font-semibold text-slate-200">{member.name}</p>
+                  <p className="text-[9px] text-slate-400">{member.time}</p>
+                </div>
+                <div>{statusBadge}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      {/* --------------------------------- */}
 
       {/* 60-Day Activity Heatmap */}
       <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl">
