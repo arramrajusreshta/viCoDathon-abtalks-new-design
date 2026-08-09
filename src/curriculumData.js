@@ -38,8 +38,7 @@ export const curriculumData = Array.from({ length: 60 }, (_, index) => {
 
     starterTemplate: "starter-template.zip",
 
-    completed: day <= 11,
-
-    locked: day > 12,
+    completed: false,
+locked: false,
   };
 });

@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabase";
 import { curriculumData } from "../curriculumData";
 
 
@@ -7,6 +8,66 @@ import { curriculumData } from "../curriculumData";
 export default function Curriculum() {
   const navigate = useNavigate();
   const [expandedDay, setExpandedDay] = useState(null);
+  const [verifiedDays, setVerifiedDays] = useState([]);
+const [missedDays, setMissedDays] = useState([]);
+const [loading, setLoading] = useState(true);
+useEffect(() => {
+  loadCurriculumProgress();
+}, []);
+
+async function loadCurriculumProgress() {
+  setLoading(true);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    setLoading(false);
+    return;
+  }
+
+  const { data: submissions, error: submissionsError } = await supabase
+    .from("submissions")
+    .select("day_number")
+    .eq("user_id", user.id)
+    .eq("github_verified", true)
+    .eq("linkedin_verified", true);
+
+  const { data: missed, error: missedError } = await supabase
+    .from("missed_days")
+    .select("day_number")
+    .eq("user_id", user.id);
+
+  if (submissionsError) {
+    console.error("Curriculum submissions error:", submissionsError);
+  }
+
+  if (missedError) {
+    console.error("Curriculum missed days error:", missedError);
+  }
+
+  setVerifiedDays(
+    (submissions || []).map((item) => Number(item.day_number))
+  );
+
+  setMissedDays(
+    (missed || []).map((item) => Number(item.day_number))
+  );
+
+  setLoading(false);
+}
+const verifiedSet = new Set(verifiedDays);
+const missedSet = new Set(missedDays);
+
+const challengeStart = new Date("2026-08-09T00:00:00+05:30");
+const today = new Date();
+
+const diffMs = today - challengeStart;
+const currentDay =
+  Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+
+const safeCurrentDay = Math.min(Math.max(currentDay, 1), 60);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 max-w-[390px] mx-auto pb-12">
@@ -59,27 +120,34 @@ export default function Curriculum() {
         {/* Curriculum List */}
         <div className="space-y-2">
           {curriculumData.map((item) => {
-            const expanded = expandedDay === item.day;
+  const expanded = expandedDay === item.day;
 
-            return (
-              <div
-                key={item.day}
-                className={`rounded-2xl border overflow-hidden transition-all ${
-                  item.completed
-                    ? "bg-slate-900 border-emerald-500/20"
-                    : item.locked
-                    ? "bg-slate-950 border-slate-800 opacity-60"
-                    : "bg-slate-900 border-orange-500/20"
-                }`}
-              >
+  const isCompleted = verifiedSet.has(item.day);
+  const isMissed = missedSet.has(item.day);
+  const isToday = item.day === safeCurrentDay;
+  const isFuture = item.day > safeCurrentDay;
 
-                {/* Day Header */}
-                <button
-                  disabled={item.locked}
-                  onClick={() =>
-                    setExpandedDay(
-                      expanded ? null : item.day
-                    )
+  return (
+  <div
+    key={item.day}
+    className={`rounded-2xl border overflow-hidden transition-all ${
+      isCompleted
+        ? "bg-slate-900 border-emerald-500/20"
+        : isMissed
+        ? "bg-slate-900 border-rose-500/20"
+        : isToday
+        ? "bg-slate-900 border-orange-500/20"
+        : "bg-slate-950 border-slate-800 opacity-60"
+    }`}
+  >
+
+    {/* Day Header */}
+    <button
+      disabled={isFuture}
+      onClick={() =>
+        setExpandedDay(
+          expanded ? null : item.day
+        )
                   }
                   className="w-full p-4 text-left flex items-center gap-3"
                 >
@@ -87,18 +155,22 @@ export default function Curriculum() {
                   {/* Day Number */}
                   <div
                     className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black ${
-                      item.completed
-                        ? "bg-emerald-500/10 text-emerald-400"
-                        : item.locked
-                        ? "bg-slate-900 text-slate-600"
-                        : "bg-orange-500/10 text-orange-400"
-                    }`}
-                  >
-                    {item.completed
-                      ? "✓"
-                      : item.locked
-                      ? "🔒"
-                      : `D${item.day}`}
+  isCompleted
+    ? "bg-emerald-500/10 text-emerald-400"
+    : isMissed
+    ? "bg-rose-500/10 text-rose-400"
+    : isToday
+    ? "bg-orange-500/10 text-orange-400"
+    : "bg-slate-900 text-slate-600"
+}`}
+>
+  {isCompleted
+    ? "✓"
+    : isMissed
+    ? "✕"
+    : isFuture
+    ? "🔒"
+    : `D${item.day}`}
                   </div>
 
                   {/* Title */}
@@ -118,16 +190,17 @@ export default function Curriculum() {
                     </h3>
                   </div>
 
-                  {!item.locked && (
-                    <span className="text-slate-500 text-xs">
-                      {expanded ? "▲" : "▼"}
-                    </span>
-                  )}
+                  {!isFuture && (
+  <>
+    {expanded ? "▲" : "▼"}
+  </>
+)}
                 </button>
 
                 {/* Expanded Content */}
-                {expanded && !item.locked && (
-                  <div className="px-4 pb-4 border-t border-slate-800">
+                {/* Expanded Content */}
+{expanded && !isFuture && (
+  <div className="px-4 pb-4 border-t border-slate-800">
 
                     <div className="pt-4 space-y-4">
 
