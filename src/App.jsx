@@ -179,6 +179,7 @@ function StudentDashboard() {
 const [profile, setProfile] = useState(null);
 const [rank, setRank] = useState(null);
 const [loading, setLoading] = useState(true);
+const [missedToday, setMissedToday] = useState(false);
 
 const data = mockStudentData;
 
@@ -207,6 +208,24 @@ async function loadDashboardData() {
   } else {
     setProfile(profileData);
   }
+  const previousDay = safeCurrentDay - 1;
+
+if (previousDay >= 1) {
+  const { data: missedData, error: missedError } = await supabase
+    .from("missed_days")
+    .select("day_number")
+    .eq("user_id", user.id)
+    .eq("day_number", previousDay)
+    .maybeSingle();
+
+  if (missedError) {
+    console.error("Missed day check error:", missedError);
+  } else {
+    setMissedToday(!!missedData);
+  }
+} else {
+  setMissedToday(false);
+}
 
   const { data: leaderboardData, error: leaderboardError } =
     await supabase.rpc("get_leaderboard", {
@@ -263,7 +282,13 @@ const safeCurrentDay = Math.min(Math.max(currentDay, 1), 60);
               <span className="text-3xl font-black text-amber-400">🔥 {profile?.current_streak ?? 0}</span>
               <span className="text-xs text-amber-300/80">Days</span>
             </div>
-            <p className="text-[10px] text-amber-200/60 mt-1">Keep it alive tonight!</p>
+            <p className="text-[10px] text-amber-200/60 mt-1">
+  {missedToday
+    ? "Yesterday was missed — start a new streak today."
+    : (profile?.current_streak ?? 0) === 0
+    ? "Start your streak today!"
+    : "Keep it alive tonight!"}
+</p>
           </div>
 
           <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800">
