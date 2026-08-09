@@ -9,30 +9,7 @@ import { Routes, Route, useNavigate, useParams, Link } from 'react-router-dom';
 import { curriculumData } from "./curriculumData";
 
 // --- MOCK DATA ---
-const mockStudentData = {
-  name: "Aarav Sharma",
-  college: "IIT Bombay",
-  track: "Full-Stack Web Dev",
-  streak: 11,
-  totalDays: 60,
-  completedDays: 11,
-  rank: 42,
-  totalStudents: 1280,
-  missedDays: [5],
-  todayTask: {
-    dayNumber: 12,
-    title: "Build a Custom Hook for API Caching",
-    category: "React / State Management",
-    description: "Create a reusable `useFetch` hook in React that caches API responses in `localStorage` to avoid duplicate network calls.",
-    requirements: [
-      "Accept URL and cache expiration time as parameters",
-      "Store fetched data in localStorage",
-      "Return { data, loading, error, refetch }"
-    ],
-    githubSubmitted: false,
-    linkedinSubmitted: false
-  }
-};
+
 
 // --- SHARED MOBILE HEADER ---
 function MobileHeader() {
@@ -179,6 +156,7 @@ function StudentDashboard() {
   const [profile, setProfile] = useState(null);
   const [rank, setRank] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [missedToday, setMissedToday] = useState(false);
 
   // --- Streak Freeze Local States ---
   const [freezeTokens, setFreezeTokens] = useState(() => {
@@ -211,9 +189,6 @@ function StudentDashboard() {
 
     alert(`Day ${missedDayNumber} successfully protected with a Freeze Token! ❄️`);
   }
-  // ------------------------------------
-
-  const data = mockStudentData;
 
   useEffect(() => {
     loadDashboardData();
@@ -241,6 +216,30 @@ function StudentDashboard() {
       setProfile(profileData);
     }
 
+    const challengeStart = new Date("2026-08-09T00:00:00+05:30");
+    const today = new Date();
+    const diffMs = today - challengeStart;
+    const currentDay = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+    const safeCurrentDay = Math.min(Math.max(currentDay, 1), 60);
+    const previousDay = safeCurrentDay - 1;
+
+    if (previousDay >= 1) {
+      const { data: missedData, error: missedError } = await supabase
+        .from("missed_days")
+        .select("day_number")
+        .eq("user_id", user.id)
+        .eq("day_number", previousDay)
+        .maybeSingle();
+
+      if (missedError) {
+        console.error("Missed day check error:", missedError);
+      } else {
+        setMissedToday(!!missedData);
+      }
+    } else {
+      setMissedToday(false);
+    }
+
     const { data: leaderboardData, error: leaderboardError } =
       await supabase.rpc("get_leaderboard", {
         page_number: 1,
@@ -259,10 +258,12 @@ function StudentDashboard() {
 
   const challengeStart = new Date("2026-08-09T00:00:00+05:30");
   const today = new Date();
-
   const diffMs = today - challengeStart;
   const currentDay = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
   const safeCurrentDay = Math.min(Math.max(currentDay, 1), 60);
+  const todayTask =
+    curriculumData.find((item) => item.day === safeCurrentDay) ||
+    curriculumData[0];
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 max-w-[390px] mx-auto pb-12">
@@ -295,7 +296,13 @@ function StudentDashboard() {
               <span className="text-3xl font-black text-amber-400">🔥 {profile?.current_streak ?? 0}</span>
               <span className="text-xs text-amber-300/80">Days</span>
             </div>
-            <p className="text-[10px] text-amber-200/60 mt-1">Keep it alive tonight!</p>
+            <p className="text-[10px] text-amber-200/60 mt-1">
+              {missedToday
+                ? "Yesterday was missed — start a new streak today."
+                : (profile?.current_streak ?? 0) === 0
+                ? "Start your streak today!"
+                : "Keep it alive tonight!"}
+            </p>
           </div>
 
           <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800">
@@ -339,8 +346,8 @@ function StudentDashboard() {
             <span className="text-[10px] text-slate-400">Due 11:59 PM</span>
           </div>
 
-          <h3 className="text-sm font-bold text-white mb-1">{data.todayTask.title}</h3>
-          <p className="text-[11px] text-slate-400 line-clamp-2 mb-4">{data.todayTask.description}</p>
+          <h3 className="text-sm font-bold text-white mb-1">{todayTask.title}</h3>
+          <p className="text-[11px] text-slate-400 line-clamp-2 mb-4">{todayTask.description}</p>
 
           <button 
             onClick={() => navigate(`/day/${safeCurrentDay}`)}
@@ -403,7 +410,6 @@ What I built: Successfully implemented the core requirements to cut down midnigh
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-  // ----------------------------------------
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -448,7 +454,7 @@ What I built: Successfully implemented the core requirements to cut down midnigh
       return;
     }
 
-    const { data: verificationData, error: verificationError } =
+    const { error: verificationError } =
       await supabase.functions.invoke("verify-github", {
         body: {
           submissionId: submission.id,
@@ -463,7 +469,7 @@ What I built: Successfully implemented the core requirements to cut down midnigh
       return;
     }
 
-    const { data: linkedinVerificationData, error: linkedinVerificationError } =
+    const { error: linkedinVerificationError } =
       await supabase.functions.invoke("verify-linkedin", {
         body: {
           submissionId: submission.id,
@@ -487,7 +493,6 @@ What I built: Successfully implemented the core requirements to cut down midnigh
       <MobileHeader />
 
       <div className="px-5 pt-4 space-y-4">
-        {/* Back Link & Title */}
         <div>
           <button 
             onClick={() => navigate('/dashboard')} 
@@ -504,7 +509,6 @@ What I built: Successfully implemented the core requirements to cut down midnigh
           <h1 className="text-lg font-extrabold text-white leading-snug">{task.title}</h1>
         </div>
 
-        {/* Task Brief */}
         <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl space-y-3">
           <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Instructions</h3>
           <p className="text-xs text-slate-300 leading-relaxed">{task.description}</p>
@@ -523,7 +527,6 @@ What I built: Successfully implemented the core requirements to cut down midnigh
           </div>
         </div>
 
-        {/* Proof of Work Submission Form */}
         <div className="bg-slate-900/90 border border-orange-500/30 p-4 rounded-2xl space-y-3">
           <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
             <span>🚀</span> Submit Proof of Work
@@ -544,7 +547,6 @@ What I built: Successfully implemented the core requirements to cut down midnigh
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               
-              {/* --- LinkedIn Draft Generator Assistant Box --- */}
               <div className="bg-slate-950 border border-slate-800 p-3 rounded-xl space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
@@ -578,7 +580,6 @@ What I built: Successfully implemented the core requirements to cut down midnigh
                   </div>
                 )}
               </div>
-              {/* --------------------------------------------- */}
 
               <div>
                 <label className="block text-[11px] font-medium text-slate-300 mb-1">
@@ -684,11 +685,9 @@ function ProtectedRoute({ children }) {
 export default function App() {
   return (
     <Routes>
-      {/* Public routes */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/auth" element={<Auth />} />
 
-      {/* Protected routes */}
       <Route
         path="/dashboard"
         element={

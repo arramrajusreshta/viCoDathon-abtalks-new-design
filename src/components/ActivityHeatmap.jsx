@@ -147,18 +147,18 @@ export default function ActivityHeatmap() {
 
       <div className="grid grid-cols-10 gap-1.5">
         {activity.map((item) => (
-          <button
-            key={item.day}
-            onClick={() => setSelectedDay(item)}
-            className={`aspect-square rounded-md border transition-all duration-200 hover:scale-110 ${getCellStyle(
-              item
-            )}`}
-          >
-            <span className="sr-only">
-              Day {item.day}
-            </span>
-          </button>
-        ))}
+  <button
+    key={item.day}
+    onClick={() => setSelectedDay(item)}
+    className={`aspect-square rounded-md border transition-all duration-200 hover:scale-110 flex items-center justify-center ${getCellStyle(
+      item
+    )}`}
+  >
+    <span className="text-[9px] font-bold">
+      {item.day}
+    </span>
+  </button>
+))}
       </div>
 
       <div className="flex items-center justify-between mt-4 text-[9px] text-slate-500">
