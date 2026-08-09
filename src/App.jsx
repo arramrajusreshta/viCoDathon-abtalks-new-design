@@ -176,60 +176,60 @@ function LandingPage() {
 function StudentDashboard() {
   const navigate = useNavigate();
 
-const [profile, setProfile] = useState(null);
-const [rank, setRank] = useState(null);
-const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState(null);
+  const [rank, setRank] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-const data = mockStudentData;
+  const data = mockStudentData;
 
-useEffect(() => {
-  loadDashboardData();
-}, []);
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
 
-async function loadDashboardData() {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  async function loadDashboardData() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (!user) {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError) {
+      console.error("Dashboard profile error:", profileError);
+    } else {
+      setProfile(profileData);
+    }
+
+    const { data: leaderboardData, error: leaderboardError } =
+      await supabase.rpc("get_leaderboard", {
+        page_number: 1,
+        page_size: 1000,
+      });
+
+    if (leaderboardError) {
+      console.error("Dashboard rank error:", leaderboardError);
+    } else {
+      const me = leaderboardData?.find((student) => student.id === user.id);
+      setRank(me?.rank ?? null);
+    }
+
     setLoading(false);
-    return;
   }
 
-  const { data: profileData, error: profileError } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
+  const challengeStart = new Date("2026-08-09T00:00:00+05:30");
+  const today = new Date();
 
-  if (profileError) {
-    console.error("Dashboard profile error:", profileError);
-  } else {
-    setProfile(profileData);
-  }
-
-  const { data: leaderboardData, error: leaderboardError } =
-    await supabase.rpc("get_leaderboard", {
-      page_number: 1,
-      page_size: 1000,
-    });
-
-  if (leaderboardError) {
-    console.error("Dashboard rank error:", leaderboardError);
-  } else {
-    const me = leaderboardData?.find((student) => student.id === user.id);
-    setRank(me?.rank ?? null);
-  }
-
-  setLoading(false);
-}
-const challengeStart = new Date("2026-08-09T00:00:00+05:30");
-const today = new Date();
-
-const diffMs = today - challengeStart;
-const currentDay = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
-
-const safeCurrentDay = Math.min(Math.max(currentDay, 1), 60);
+  const diffMs = today - challengeStart;
+  const currentDay = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+  const safeCurrentDay = Math.min(Math.max(currentDay, 1), 60);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 max-w-[390px] mx-auto pb-12">
@@ -240,13 +240,12 @@ const safeCurrentDay = Math.min(Math.max(currentDay, 1), 60);
         <div className="flex items-center justify-between bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800">
           <div>
             <h2 className="text-base font-bold text-white">
-  {profile?.name || "Your Name"}
-</h2>
-
-<p className="text-[11px] text-slate-400">
-  {profile?.college || "College not added"} •{" "}
-  {profile?.track || "Track not added"}
-</p>
+              {profile?.name || "Your Name"}
+            </h2>
+            <p className="text-[11px] text-slate-400">
+              {profile?.college || "College not added"} •{" "}
+              {profile?.track || "Track not added"}
+            </p>
           </div>
           <div className="text-right">
             <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
@@ -305,117 +304,127 @@ const safeCurrentDay = Math.min(Math.max(currentDay, 1), 60);
 // --- SCREEN 3: CHALLENGE DAY ( /day/12 ) ---
 function ChallengeDay() {
   const { dayId } = useParams();
-const navigate = useNavigate();
+  const navigate = useNavigate();
 
-const task = curriculumData.find(
-  (item) => item.day === Number(dayId)
-);
-if (!task) {
-  return (
-    <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
-      <p className="text-sm text-slate-400">
-        Challenge not found.
-      </p>
-    </div>
+  const task = curriculumData.find(
+    (item) => item.day === Number(dayId)
   );
-}
+
+  if (!task) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+        <p className="text-sm text-slate-400">
+          Challenge not found.
+        </p>
+      </div>
+    );
+  }
 
   const [githubUrl, setGithubUrl] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [submitted, setSubmitted] = useState(false);
-const [submitting, setSubmitting] = useState(false);
-const [submitError, setSubmitError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+  // --- LinkedIn Draft Generator States ---
+  const [generatedDraft, setGeneratedDraft] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  const handleGenerateDraft = () => {
+    const draft = `🚀 Just wrapped up Day ${dayId || task.day} of the 60-day challenge: "${task.title}"!
+
+Key focus: ${task.category}
+What I built: Successfully implemented the core requirements to cut down midnight friction and build consistent habits.
+
+#BuildInPublic #Coding #DeveloperJourney #100DaysOfCode #ABTalks60D`;
+    
+    setGeneratedDraft(draft);
+    setCopied(false);
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(generatedDraft);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  // ----------------------------------------
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
+    setSubmitting(true);
+    setSubmitError("");
 
-  setSubmitting(true);
-  setSubmitError("");
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    setSubmitError("You must be logged in to submit proof.");
-    setSubmitting(false);
-    return;
-  }
-
-  const dayNumber = Number(dayId || task.day);
-
-  const { data: submission, error } = await supabase
-  .from("submissions")
-  .upsert(
-    {
-      user_id: user.id,
-      day_number: dayNumber,
-      github_url: githubUrl,
-      linkedin_url: linkedinUrl,
-      github_verified: false,
-      linkedin_verified: false,
-      submitted_at: new Date().toISOString(),
-    },
-    {
-      onConflict: "user_id,day_number",
+    if (!user) {
+      setSubmitError("You must be logged in to submit proof.");
+      setSubmitting(false);
+      return;
     }
-  )
-  .select()
-  .single();
 
-  if (error) {
-    console.error("Submission error:", error);
-    setSubmitError(error.message);
+    const dayNumber = Number(dayId || task.day);
+
+    const { data: submission, error } = await supabase
+      .from("submissions")
+      .upsert(
+        {
+          user_id: user.id,
+          day_number: dayNumber,
+          github_url: githubUrl,
+          linkedin_url: linkedinUrl,
+          github_verified: false,
+          linkedin_verified: false,
+          submitted_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "user_id,day_number",
+        }
+      )
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Submission error:", error);
+      setSubmitError(error.message);
+      setSubmitting(false);
+      return;
+    }
+
+    const { data: verificationData, error: verificationError } =
+      await supabase.functions.invoke("verify-github", {
+        body: {
+          submissionId: submission.id,
+          githubUrl: githubUrl,
+        },
+      });
+
+    if (verificationError) {
+      console.error("GitHub verification error:", verificationError);
+      setSubmitError("Submission saved, but GitHub verification failed.");
+      setSubmitting(false);
+      return;
+    }
+
+    const { data: linkedinVerificationData, error: linkedinVerificationError } =
+      await supabase.functions.invoke("verify-linkedin", {
+        body: {
+          submissionId: submission.id,
+          linkedinUrl: linkedinUrl,
+        },
+      });
+
+    if (linkedinVerificationError) {
+      console.error("LinkedIn verification error:", linkedinVerificationError);
+      setSubmitError("Submission saved, but LinkedIn verification failed.");
+      setSubmitting(false);
+      return;
+    }
+
+    setSubmitted(true);
     setSubmitting(false);
-    return;
-  }
-  const { data: verificationData, error: verificationError } =
-  await supabase.functions.invoke("verify-github", {
-    body: {
-      submissionId: submission.id,
-      githubUrl: githubUrl,
-    },
-  });
-
-if (verificationError) {
-  console.error("GitHub verification error:", verificationError);
-  setSubmitError(
-    "Submission saved, but GitHub verification failed."
-  );
-  setSubmitting(false);
-  return;
-}
-
-console.log("GitHub verification:", verificationData);
-const { data: linkedinVerificationData, error: linkedinVerificationError } =
-  await supabase.functions.invoke("verify-linkedin", {
-    body: {
-      submissionId: submission.id,
-      linkedinUrl: linkedinUrl,
-    },
-  });
-
-if (linkedinVerificationError) {
-  console.error(
-    "LinkedIn verification error:",
-    linkedinVerificationError
-  );
-
-  setSubmitError(
-    "Submission saved, but LinkedIn verification failed."
-  );
-
-  setSubmitting(false);
-  return;
-}
-
-console.log(
-  "LinkedIn verification:",
-  linkedinVerificationData
-);
-  setSubmitted(true);
-  setSubmitting(false);
-};
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 max-w-[390px] mx-auto pb-12">
@@ -445,28 +454,17 @@ console.log(
           <p className="text-xs text-slate-300 leading-relaxed">{task.description}</p>
 
           <div className="space-y-2 pt-1">
-  <p className="text-[11px] font-semibold text-slate-400">
-    Problem Statement:
-  </p>
+            <p className="text-[11px] font-semibold text-slate-400">Problem Statement:</p>
+            <p className="text-xs text-slate-300">{task.problem}</p>
 
-  <p className="text-xs text-slate-300">
-    {task.problem}
-  </p>
-
-  <p className="text-[11px] font-semibold text-slate-400 mt-3">
-    Resources:
-  </p>
-
-  {task.resources.map((resource, idx) => (
-    <div
-      key={idx}
-      className="flex items-start gap-2 text-xs text-slate-300"
-    >
-      <span className="text-amber-400">✓</span>
-      <span>{resource}</span>
-    </div>
-  ))}
-</div>
+            <p className="text-[11px] font-semibold text-slate-400 mt-3">Resources:</p>
+            {task.resources?.map((resource, idx) => (
+              <div key={idx} className="flex items-start gap-2 text-xs text-slate-300">
+                <span className="text-amber-400">✓</span>
+                <span>{resource}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Proof of Work Submission Form */}
@@ -479,9 +477,7 @@ console.log(
             <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-2">
               <span className="text-2xl">🎉</span>
               <h4 className="text-xs font-bold text-emerald-400">Day {dayId} Proof Submitted!</h4>
-              <p className="text-[10px] text-slate-300">
-  Your proof was submitted and is awaiting verification.
-</p>
+              <p className="text-[10px] text-slate-300">Your proof was submitted and is awaiting verification.</p>
               <button 
                 onClick={() => navigate('/dashboard')}
                 className="mt-2 w-full py-2 bg-slate-800 text-xs font-semibold rounded-lg text-white"
@@ -490,7 +486,44 @@ console.log(
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              
+              {/* --- LinkedIn Draft Generator Assistant Box --- */}
+              <div className="bg-slate-950 border border-slate-800 p-3 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-[11px] font-semibold text-white">⚡ Midnight Lifeline Assistant</h4>
+                    <p className="text-[9px] text-slate-400">Auto-generate your LinkedIn reflection post</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGenerateDraft}
+                    className="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg font-medium transition"
+                  >
+                    Generate Draft 🪄
+                  </button>
+                </div>
+
+                {generatedDraft && (
+                  <div className="bg-slate-900 border border-slate-800 p-2.5 rounded-lg space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-medium text-emerald-400">Draft Ready</span>
+                      <button 
+                        type="button"
+                        onClick={handleCopy}
+                        className="text-[9px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded transition"
+                      >
+                        {copied ? 'Copied! ✅' : 'Copy Caption 📋'}
+                      </button>
+                    </div>
+                    <pre className="text-[10px] text-slate-300 whitespace-pre-wrap font-sans leading-relaxed">
+                      {generatedDraft}
+                    </pre>
+                  </div>
+                )}
+              </div>
+              {/* --------------------------------------------- */}
+
               <div>
                 <label className="block text-[11px] font-medium text-slate-300 mb-1">
                   1. GitHub Repository or Commit URL
@@ -518,20 +551,20 @@ console.log(
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500"
                 />
               </div>
-{submitError && (
-  <p className="text-[10px] text-rose-400">
-    {submitError}
-  </p>
-)}
+
+              {submitError && (
+                <p className="text-[10px] text-rose-400">{submitError}</p>
+              )}
+
               <button
-  type="submit"
-  disabled={submitting}
-  className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold text-xs rounded-xl shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50"
->
-  {submitting
-    ? "Submitting..."
-    : `Submit Day ${dayId || task.day} Proof →`}
-</button>
+                type="submit"
+                disabled={submitting}
+                className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold text-xs rounded-xl shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50"
+              >
+                {submitting
+                  ? "Submitting..."
+                  : `Submit Day ${dayId || task.day} Proof →`}
+              </button>
             </form>
           )}
         </div>
@@ -539,6 +572,7 @@ console.log(
     </div>
   );
 }
+
 function ProtectedRoute({ children }) {
   const [checking, setChecking] = useState(true);
   const [session, setSession] = useState(null);
@@ -589,59 +623,60 @@ function ProtectedRoute({ children }) {
 
   return children;
 }
+
 // --- APP ROUTER ---
 export default function App() {
   return (
     <Routes>
-  {/* Public routes */}
-  <Route path="/" element={<LandingPage />} />
-  <Route path="/auth" element={<Auth />} />
+      {/* Public routes */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/auth" element={<Auth />} />
 
-  {/* Protected routes */}
-  <Route
-    path="/dashboard"
-    element={
-      <ProtectedRoute>
-        <StudentDashboard />
-      </ProtectedRoute>
-    }
-  />
+      {/* Protected routes */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <StudentDashboard />
+          </ProtectedRoute>
+        }
+      />
 
-  <Route
-    path="/profile"
-    element={
-      <ProtectedRoute>
-        <Profile />
-      </ProtectedRoute>
-    }
-  />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        }
+      />
 
-  <Route
-    path="/curriculum"
-    element={
-      <ProtectedRoute>
-        <Curriculum />
-      </ProtectedRoute>
-    }
-  />
+      <Route
+        path="/curriculum"
+        element={
+          <ProtectedRoute>
+            <Curriculum />
+          </ProtectedRoute>
+        }
+      />
 
-  <Route
-    path="/leaderboard"
-    element={
-      <ProtectedRoute>
-        <Leaderboard />
-      </ProtectedRoute>
-    }
-  />
+      <Route
+        path="/leaderboard"
+        element={
+          <ProtectedRoute>
+            <Leaderboard />
+          </ProtectedRoute>
+        }
+      />
 
-  <Route
-    path="/day/:dayId"
-    element={
-      <ProtectedRoute>
-        <ChallengeDay />
-      </ProtectedRoute>
-    }
-  />
-</Routes>
+      <Route
+        path="/day/:dayId"
+        element={
+          <ProtectedRoute>
+            <ChallengeDay />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
   );
 }
