@@ -180,6 +180,39 @@ function StudentDashboard() {
   const [rank, setRank] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // --- Streak Freeze Local States ---
+  const [freezeTokens, setFreezeTokens] = useState(() => {
+    return Number(localStorage.getItem('abtalks_freeze_tokens') ?? 2);
+  });
+  const [frozenDays, setFrozenDays] = useState(() => {
+    const saved = localStorage.getItem('abtalks_frozen_days');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  function handleUseFreeze(missedDayNumber) {
+    if (freezeTokens <= 0) {
+      alert("You are out of freeze tokens for this month!");
+      return;
+    }
+
+    if (frozenDays.includes(missedDayNumber)) {
+      alert(`Day ${missedDayNumber} is already frozen! ❄️`);
+      return;
+    }
+
+    const updatedTokens = freezeTokens - 1;
+    const updatedDays = [...frozenDays, missedDayNumber];
+
+    setFreezeTokens(updatedTokens);
+    setFrozenDays(updatedDays);
+
+    localStorage.setItem('abtalks_freeze_tokens', updatedTokens);
+    localStorage.setItem('abtalks_frozen_days', JSON.stringify(updatedDays));
+
+    alert(`Day ${missedDayNumber} successfully protected with a Freeze Token! ❄️`);
+  }
+  // ------------------------------------
+
   const data = mockStudentData;
 
   useEffect(() => {
@@ -272,6 +305,29 @@ function StudentDashboard() {
             </div>
             <p className="text-[10px] text-slate-400 mt-1">{profile?.completed_days ?? 0} of 60 Days Done</p>
           </div>
+        </div>
+
+        {/* Streak Freeze Local Widget */}
+        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm">❄️</span>
+              <h4 className="text-xs font-bold text-white">Streak Freeze Tokens</h4>
+            </div>
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              You have <span className="text-blue-400 font-semibold">{freezeTokens} tokens</span> left. 
+              {frozenDays.length > 0 && ` (${frozenDays.length} frozen)`}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              const dayInput = prompt("Enter the past missed day number you want to freeze (1-60):");
+              if (dayInput) handleUseFreeze(Number(dayInput));
+            }}
+            className="text-[10px] bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-xl font-semibold transition cursor-pointer"
+          >
+            Use Freeze 🧊
+          </button>
         </div>
 
         {/* Today's Action Card */}
