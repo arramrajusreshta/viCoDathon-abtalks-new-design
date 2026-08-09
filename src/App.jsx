@@ -324,22 +324,24 @@ const [submitError, setSubmitError] = useState("");
 
   const dayNumber = Number(dayId || task.dayNumber);
 
-  const { error } = await supabase
-    .from("submissions")
-    .upsert(
-      {
-        user_id: user.id,
-        day_number: dayNumber,
-        github_url: githubUrl,
-        linkedin_url: linkedinUrl,
-        github_verified: false,
-        linkedin_verified: false,
-        submitted_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "user_id,day_number",
-      }
-    );
+  const { data: submission, error } = await supabase
+  .from("submissions")
+  .upsert(
+    {
+      user_id: user.id,
+      day_number: dayNumber,
+      github_url: githubUrl,
+      linkedin_url: linkedinUrl,
+      github_verified: false,
+      linkedin_verified: false,
+      submitted_at: new Date().toISOString(),
+    },
+    {
+      onConflict: "user_id,day_number",
+    }
+  )
+  .select()
+  .single();
 
   if (error) {
     console.error("Submission error:", error);
@@ -347,6 +349,24 @@ const [submitError, setSubmitError] = useState("");
     setSubmitting(false);
     return;
   }
+  const { data: verificationData, error: verificationError } =
+  await supabase.functions.invoke("verify-github", {
+    body: {
+      submissionId: submission.id,
+      githubUrl: githubUrl,
+    },
+  });
+
+if (verificationError) {
+  console.error("GitHub verification error:", verificationError);
+  setSubmitError(
+    "Submission saved, but GitHub verification failed."
+  );
+  setSubmitting(false);
+  return;
+}
+
+console.log("GitHub verification:", verificationData);
 
   setSubmitted(true);
   setSubmitting(false);
