@@ -107,12 +107,14 @@ const safeCurrentDay = Math.min(Math.max(currentDay, 1), 60);
             <div className="flex-1 h-2 bg-slate-950 rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-amber-500 to-orange-500"
-                style={{ width: "18%" }}
+                style={{
+  width: `${(verifiedDays.length / 60) * 100}%`,
+}}
               />
             </div>
 
             <span className="text-[10px] text-slate-400">
-              11 / 60
+              {verifiedDays.length}/60
             </span>
           </div>
         </div>
