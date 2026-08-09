@@ -367,7 +367,32 @@ if (verificationError) {
 }
 
 console.log("GitHub verification:", verificationData);
+const { data: linkedinVerificationData, error: linkedinVerificationError } =
+  await supabase.functions.invoke("verify-linkedin", {
+    body: {
+      submissionId: submission.id,
+      linkedinUrl: linkedinUrl,
+    },
+  });
 
+if (linkedinVerificationError) {
+  console.error(
+    "LinkedIn verification error:",
+    linkedinVerificationError
+  );
+
+  setSubmitError(
+    "Submission saved, but LinkedIn verification failed."
+  );
+
+  setSubmitting(false);
+  return;
+}
+
+console.log(
+  "LinkedIn verification:",
+  linkedinVerificationData
+);
   setSubmitted(true);
   setSubmitting(false);
 };
