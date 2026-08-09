@@ -32,10 +32,38 @@ async function loadProfile() {
   }
 
   const { data, error } = await supabase
+  .from("profiles")
+  .select("*")
+  .eq("id", user.id)
+  .maybeSingle();
+
+if (error) {
+  console.error("Profile error:", error);
+} else if (!data) {
+  const { data: newProfile, error: createError } = await supabase
     .from("profiles")
-    .select("*")
-    .eq("id", user.id)
+    .insert({
+      id: user.id,
+      name: user.user_metadata?.name || "",
+      college: "",
+      track: "",
+      github_username: "",
+      linkedin_url: "",
+      current_streak: 0,
+      longest_streak: 0,
+      completed_days: 0,
+    })
+    .select()
     .single();
+
+  if (createError) {
+    console.error("Create profile error:", createError);
+  } else {
+    setProfile(newProfile);
+  }
+} else {
+  setProfile(data);
+}
 
   if (error) {
     console.error("Profile error:", error);
