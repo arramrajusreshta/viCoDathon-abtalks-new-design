@@ -6,6 +6,7 @@ import ActivityHeatmap from "./components/ActivityHeatmap";
 import Profile from './pages/profile';
 import React, { useEffect, useState } from "react";
 import { Routes, Route, useNavigate, useParams, Link } from 'react-router-dom';
+import { curriculumData } from "./curriculumData";
 
 // --- MOCK DATA ---
 const mockStudentData = {
@@ -222,6 +223,13 @@ async function loadDashboardData() {
 
   setLoading(false);
 }
+const challengeStart = new Date("2026-08-09T00:00:00+05:30");
+const today = new Date();
+
+const diffMs = today - challengeStart;
+const currentDay = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+
+const safeCurrentDay = Math.min(Math.max(currentDay, 1), 60);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 max-w-[390px] mx-auto pb-12">
@@ -271,7 +279,7 @@ async function loadDashboardData() {
         <div className="bg-gradient-to-r from-orange-950/40 via-slate-900 to-slate-900 border border-orange-500/30 p-4 rounded-2xl">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-orange-500/20 text-orange-400 border border-orange-500/30">
-              Today • Day {data.todayTask.dayNumber}
+              Today • Day {safeCurrentDay}
             </span>
             <span className="text-[10px] text-slate-400">Due 11:59 PM</span>
           </div>
@@ -280,10 +288,10 @@ async function loadDashboardData() {
           <p className="text-[11px] text-slate-400 line-clamp-2 mb-4">{data.todayTask.description}</p>
 
           <button 
-            onClick={() => navigate(`/day/${data.todayTask.dayNumber}`)}
+            onClick={() => navigate(`/day/${safeCurrentDay}`)}
             className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-colors"
           >
-            Start Day {data.todayTask.dayNumber} Task →
+            Start Day {safeCurrentDay} Task →
           </button>
         </div>
 
@@ -297,8 +305,20 @@ async function loadDashboardData() {
 // --- SCREEN 3: CHALLENGE DAY ( /day/12 ) ---
 function ChallengeDay() {
   const { dayId } = useParams();
-  const navigate = useNavigate();
-  const task = mockStudentData.todayTask;
+const navigate = useNavigate();
+
+const task = curriculumData.find(
+  (item) => item.day === Number(dayId)
+);
+if (!task) {
+  return (
+    <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+      <p className="text-sm text-slate-400">
+        Challenge not found.
+      </p>
+    </div>
+  );
+}
 
   const [githubUrl, setGithubUrl] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
@@ -322,7 +342,7 @@ const [submitError, setSubmitError] = useState("");
     return;
   }
 
-  const dayNumber = Number(dayId || task.dayNumber);
+  const dayNumber = Number(dayId || task.day);
 
   const { data: submission, error } = await supabase
   .from("submissions")
@@ -412,7 +432,7 @@ console.log(
           </button>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-bold bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20">
-              Day {dayId || task.dayNumber} of 60
+              Day {dayId || task.day} of 60
             </span>
             <span className="text-[10px] text-slate-400">{task.category}</span>
           </div>
@@ -424,15 +444,29 @@ console.log(
           <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Instructions</h3>
           <p className="text-xs text-slate-300 leading-relaxed">{task.description}</p>
 
-          <div className="space-y-1.5 pt-1">
-            <p className="text-[11px] font-semibold text-slate-400">Acceptance Criteria:</p>
-            {task.requirements.map((req, idx) => (
-              <div key={idx} className="flex items-start gap-2 text-xs text-slate-300">
-                <span className="text-amber-400">✓</span>
-                <span>{req}</span>
-              </div>
-            ))}
-          </div>
+          <div className="space-y-2 pt-1">
+  <p className="text-[11px] font-semibold text-slate-400">
+    Problem Statement:
+  </p>
+
+  <p className="text-xs text-slate-300">
+    {task.problem}
+  </p>
+
+  <p className="text-[11px] font-semibold text-slate-400 mt-3">
+    Resources:
+  </p>
+
+  {task.resources.map((resource, idx) => (
+    <div
+      key={idx}
+      className="flex items-start gap-2 text-xs text-slate-300"
+    >
+      <span className="text-amber-400">✓</span>
+      <span>{resource}</span>
+    </div>
+  ))}
+</div>
         </div>
 
         {/* Proof of Work Submission Form */}
@@ -496,7 +530,7 @@ console.log(
 >
   {submitting
     ? "Submitting..."
-    : `Submit Day ${dayId || task.dayNumber} Proof →`}
+    : `Submit Day ${dayId || task.day} Proof →`}
 </button>
             </form>
           )}
