@@ -1,8 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ActivityHeatmap from "../components/ActivityHeatmap";
 
 export default function Dashboard() {
-  // --- Streak Freeze Local States ---
   const [freezeTokens, setFreezeTokens] = useState(() => {
     return Number(localStorage.getItem('abtalks_freeze_tokens') ?? 2);
   });
@@ -10,6 +9,37 @@ export default function Dashboard() {
     const saved = localStorage.getItem('abtalks_frozen_days');
     return saved ? JSON.parse(saved) : [];
   });
+
+  // --- AUTOMATIC STREAK FREEZE CHECKER ---
+  useEffect(() => {
+    const challengeStart = new Date("2026-08-09T00:00:00+05:30");
+    const today = new Date();
+    const diffMs = today - challengeStart;
+    const currentDay = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+    
+    // Check if we are past Day 1 and yesterday was skipped
+    const yesterday = currentDay - 1;
+    if (yesterday > 0) {
+      const completedDays = JSON.parse(localStorage.getItem('abtalks_completed_days') || "[]");
+      
+      // If yesterday was NOT completed and NOT already frozen, try to auto-freeze it
+      if (!completedDays.includes(yesterday) && !frozenDays.includes(yesterday)) {
+        if (freezeTokens > 0) {
+          const updatedTokens = freezeTokens - 1;
+          const updatedDays = [...frozenDays, yesterday];
+
+          setFreezeTokens(updatedTokens);
+          setFrozenDays(updatedDays);
+
+          localStorage.setItem('abtalks_freeze_tokens', updatedTokens);
+          localStorage.setItem('abtalks_frozen_days', JSON.stringify(updatedDays));
+
+          alert(`⚡ Auto-Pilot: You missed Day ${yesterday}. A Streak Freeze Token was automatically applied to save your streak! ❄️`);
+        }
+      }
+    }
+  }, []);
+  // ----------------------------------------
 
   function handleUseFreeze(missedDayNumber) {
     if (freezeTokens <= 0) {
@@ -47,7 +77,7 @@ export default function Dashboard() {
           </div>
           <p className="text-[10px] text-slate-400 mt-0.5">
             You have <span className="text-blue-400 font-semibold">{freezeTokens} tokens</span> left. 
-            {frozenDays.length > 0 && ` (${frozenDays.length} frozen)`}
+            {frozenDays.length > 0 && ` (${frozenDays.length} frozen: Days ${frozenDays.join(", ")})`}
           </p>
         </div>
         <button
