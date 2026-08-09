@@ -16,6 +16,7 @@ const [editGithub, setEditGithub] = useState("");
 const [editLinkedin, setEditLinkedin] = useState("");
 const [saving, setSaving] = useState(false);
 const [verifiedDays, setVerifiedDays] = useState([]);
+const [rank, setRank] = useState(null);
 
 useEffect(() => {
   loadProfile();
@@ -65,11 +66,21 @@ if (error) {
   setProfile(data);
 }
 
-  if (error) {
-    console.error("Profile error:", error);
-  } else {
-    setProfile(data);
-  }
+  const { data: leaderboardData, error: leaderboardError } =
+  await supabase.rpc("get_leaderboard", {
+    page_number: 1,
+    page_size: 1000,
+  });
+
+if (leaderboardError) {
+  console.error("Profile rank error:", leaderboardError);
+} else {
+  const me = leaderboardData?.find(
+    (student) => student.id === user.id
+  );
+
+  setRank(me?.rank ?? null);
+}
   const { data: submissions, error: submissionsError } = await supabase
   .from("submissions")
   .select("day_number")
@@ -186,6 +197,13 @@ async function saveProfile() {
 
   setSaving(false);
 }
+const initials =
+  profile?.name
+    ?.split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "?";
       return (
   <div className="min-h-screen bg-slate-950 text-slate-100 max-w-[390px] mx-auto pb-12">
 
@@ -215,7 +233,7 @@ async function saveProfile() {
         {/* Profile Header */}
         <div className="text-center">
           <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-tr from-amber-500 via-orange-500 to-red-500 flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-orange-500/20">
-            AS
+            {initials}
           </div>
 
           <h2 className="text-xl font-bold text-white mt-3">
@@ -243,12 +261,12 @@ async function saveProfile() {
           </div>
 
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-center">
-            <p className="text-lg font-black text-emerald-400">11</p>
+            <p className="text-lg font-black text-emerald-400">{profile?.completed_days ?? 0}</p>
             <p className="text-[10px] text-slate-400">Completed</p>
           </div>
 
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-center">
-            <p className="text-lg font-black text-orange-400">#42</p>
+            <p className="text-lg font-black text-orange-400">{rank ? `#${rank}` : "—"}</p>
             <p className="text-[10px] text-slate-400">Rank</p>
           </div>
         </div>
@@ -282,15 +300,7 @@ async function saveProfile() {
               </p>
             </a>
 
-            <a
-              href="#"
-              className="block p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700"
-            >
-              <p className="text-xs font-semibold text-white">Portfolio</p>
-              <p className="text-[10px] text-slate-400">
-                aaravsharma.dev
-              </p>
-            </a>
+            
           </div>
         </section>
 
@@ -303,23 +313,39 @@ async function saveProfile() {
           <div className="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800">
             <div>
               <p className="text-xs font-semibold text-white">GitHub</p>
-              <p className="text-[10px] text-emerald-400">
-                Connected
-              </p>
+              <p
+  className={`text-[10px] ${
+    profile?.github_username
+      ? "text-emerald-400"
+      : "text-slate-500"
+  }`}
+>
+  {profile?.github_username ? "Connected" : "Not connected"}
+</p>
             </div>
 
-            <span className="text-emerald-400 text-sm">✓</span>
+            {profile?.github_username && (
+  <span className="text-emerald-400 text-sm">✓</span>
+)}
           </div>
 
           <div className="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800 mt-2">
             <div>
               <p className="text-xs font-semibold text-white">LinkedIn</p>
-              <p className="text-[10px] text-emerald-400">
-                Connected
-              </p>
+              <p
+  className={`text-[10px] ${
+    profile?.linkedin_url
+      ? "text-emerald-400"
+      : "text-slate-500"
+  }`}
+>
+  {profile?.linkedin_url ? "Connected" : "Not connected"}
+</p>
             </div>
 
-            <span className="text-emerald-400 text-sm">✓</span>
+            {profile?.linkedin_url && (
+  <span className="text-emerald-400 text-sm">✓</span>
+)}
           </div>
         </section>
 

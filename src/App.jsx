@@ -9,30 +9,7 @@ import { Routes, Route, useNavigate, useParams, Link } from 'react-router-dom';
 import { curriculumData } from "./curriculumData";
 
 // --- MOCK DATA ---
-const mockStudentData = {
-  name: "Aarav Sharma",
-  college: "IIT Bombay",
-  track: "Full-Stack Web Dev",
-  streak: 11,
-  totalDays: 60,
-  completedDays: 11,
-  rank: 42,
-  totalStudents: 1280,
-  missedDays: [5],
-  todayTask: {
-    dayNumber: 12,
-    title: "Build a Custom Hook for API Caching",
-    category: "React / State Management",
-    description: "Create a reusable `useFetch` hook in React that caches API responses in `localStorage` to avoid duplicate network calls.",
-    requirements: [
-      "Accept URL and cache expiration time as parameters",
-      "Store fetched data in localStorage",
-      "Return { data, loading, error, refetch }"
-    ],
-    githubSubmitted: false,
-    linkedinSubmitted: false
-  }
-};
+
 
 // --- SHARED MOBILE HEADER ---
 function MobileHeader() {
@@ -181,7 +158,7 @@ const [rank, setRank] = useState(null);
 const [loading, setLoading] = useState(true);
 const [missedToday, setMissedToday] = useState(false);
 
-const data = mockStudentData;
+
 
 useEffect(() => {
   loadDashboardData();
@@ -249,6 +226,9 @@ const diffMs = today - challengeStart;
 const currentDay = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
 
 const safeCurrentDay = Math.min(Math.max(currentDay, 1), 60);
+const todayTask =
+  curriculumData.find((item) => item.day === safeCurrentDay) ||
+  curriculumData[0];
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 max-w-[390px] mx-auto pb-12">
@@ -309,8 +289,8 @@ const safeCurrentDay = Math.min(Math.max(currentDay, 1), 60);
             <span className="text-[10px] text-slate-400">Due 11:59 PM</span>
           </div>
 
-          <h3 className="text-sm font-bold text-white mb-1">{data.todayTask.title}</h3>
-          <p className="text-[11px] text-slate-400 line-clamp-2 mb-4">{data.todayTask.description}</p>
+          <h3 className="text-sm font-bold text-white mb-1">{todayTask.title}</h3>
+          <p className="text-[11px] text-slate-400 line-clamp-2 mb-4">{todayTask.description}</p>
 
           <button 
             onClick={() => navigate(`/day/${safeCurrentDay}`)}
